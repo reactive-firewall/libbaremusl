@@ -307,6 +307,7 @@
 /* __unused denotes variables and functions that may not be used, preventing
  * the compiler from warning about it if not used.
  */
+#if !defined(__GNUC__)
 #if __has_attribute(__unused__)
 #ifndef __unused
 /// Use this to declare `__attribute__((__unused__))` when available.
@@ -315,8 +316,10 @@
 #else /* !__attribute__ ((__unused__)) */
 #ifndef __unused
 #warning No support for unused symbols
+#define __unused	/**/
 #endif /* !__unused */
 #endif /* END ((__unused__)) */
+#endif /* !defined(__GNUC__) */
 /* __used forces variables and functions to be included even if it appears
  * to the compiler that they are not used (and would thus be discarded).
  */
