@@ -1216,6 +1216,19 @@ __asm__(".symver impl, sym@@@verid")
 #define __unsafe_buffer_usage_end
 #endif
 
+#if defined(__clang__) && __clang__
+#pragma mark -
+#pragma mark Musl Stuff
+#endif /* !__clang__ */
+
+#if !defined(__intptr_t)
+#define intptr_t	__intptr_t
+#endif
+
+#if !defined(__uintptr_t)
+#define uintptr_t	__uintptr_t
+#endif
+
 /*
  * COMPILATION ENVIRONMENTS -- see compat(5) for additional detail
  *
