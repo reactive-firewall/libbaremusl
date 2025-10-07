@@ -1637,16 +1637,16 @@ __asm__(".symver impl, sym@@@verid")
 #ifdef __GNUC__ // Check if the compiler is GCC or Clang
 #define make_compiler_happy(m) \
 	({ \
-		__CAST_AWAY_QUALIFIER_PUSH() \
-		m \
-		__CAST_AWAY_QUALIFIER_POP() \
+		__CAST_AWAY_QUALIFIER_PUSH(); \
+		m; \
+		__CAST_AWAY_QUALIFIER_POP(); \
 	})
 #elif defined(__clang__) // Check if the compiler is Clang
 #define make_compiler_happy(m) \
 	({ \
-		__CAST_AWAY_QUALIFIER_PUSH() \
-		m \
-		__CAST_AWAY_QUALIFIER_POP() \
+		__CAST_AWAY_QUALIFIER_PUSH(); \
+		m; \
+		__CAST_AWAY_QUALIFIER_POP(); \
 	})
 #else
 #define make_compiler_happy(m) m // Fallback for non-GCC and non-Clang compilers
@@ -1655,7 +1655,11 @@ __asm__(".symver impl, sym@@@verid")
 #endif /* !MAKE_COMPILER_HAPPY_H */
 
 #define __CAST_AWAY_QUALIFIER(variable, qualifier, type) \
-	make_compiler_happy(((type)(__uintptr_t)(qualifier void *)(variable)))
+	make_compiler_happy( \
+		({ \
+			((type)(__uintptr_t)(qualifier void *)(variable))); \
+		}) \
+	)
 
 #endif /* !__CAST_AWAY_QUALIFIER */
 
