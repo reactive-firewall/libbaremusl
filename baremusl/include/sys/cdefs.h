@@ -1597,7 +1597,7 @@ __asm__(".symver impl, sym@@@verid")
 	_Pragma("GCC diagnostic ignored \"-Wcast-qual\"") \
 	_Pragma("GCC diagnostic ignored \"-Wcast-align\"") \
 	_Pragma("GCC diagnostic ignored \"-Waddress-of-packed-member\"") \
-	((type)(variable)) \
+	((type)(__uintptr_t)(qualifier void *)(variable)) \
 	_Pragma("GCC diagnostic pop")
 #endif
 
