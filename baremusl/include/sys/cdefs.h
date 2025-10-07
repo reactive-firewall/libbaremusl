@@ -315,8 +315,6 @@
 #else /* !__attribute__ ((__unused__)) */
 #ifndef __unused
 #warning No support for unused symbols
-/// Use this to declare `__attribute__((__unused__))` when available.
-#define __unused
 #endif /* !__unused */
 #endif /* END ((__unused__)) */
 /* __used forces variables and functions to be included even if it appears
