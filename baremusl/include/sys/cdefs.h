@@ -1592,14 +1592,59 @@ __asm__(".symver impl, sym@@@verid")
  * ignored everything, so things break left and right if you
  * make it only ignore -Wcast-qual.
  */
-#define __CAST_AWAY_QUALIFIER(variable, qualifier, type) \
+#ifdef __GNUC__ /* Check if the compiler is GCC */
+#define __CAST_AWAY_QUALIFIER_PUSH() \
 	_Pragma("GCC diagnostic push") \
 	_Pragma("GCC diagnostic ignored \"-Wcast-qual\"") \
 	_Pragma("GCC diagnostic ignored \"-Wcast-align\"") \
-	_Pragma("GCC diagnostic ignored \"-Waddress-of-packed-member\"") \
-	((type)(__uintptr_t)(qualifier void *)(variable)) \
-	_Pragma("GCC diagnostic pop")
+	_Pragma("GCC diagnostic ignored \"-Waddress-of-packed-member\"")
+#elif defined(__clang__) /* Check if the compiler is Clang */
+#define __CAST_AWAY_QUALIFIER_PUSH() \
+	_Pragma("clang diagnostic push") \
+	_Pragma("clang diagnostic ignored \"-Wcast-qual\"") \
+	_Pragma("clang diagnostic ignored \"-Wcast-align\"") \
+	_Pragma("clang diagnostic ignored \"-Waddress-of-packed-member\"")
+#else
+#define __CAST_AWAY_QUALIFIER_PUSH() /* Fallback for non-GCC and non-Clang compilers */
 #endif
+
+#ifdef __GNUC__ /* Check if the compiler is GCC */
+#define __CAST_AWAY_QUALIFIER_POP() \
+	_Pragma("GCC diagnostic pop")
+#elif defined(__clang__) /* Check if the compiler is Clang */
+#define __CAST_AWAY_QUALIFIER_POP() \
+	_Pragma("clang diagnostic pop")
+#else
+#define __CAST_AWAY_QUALIFIER_POP() /* Fallback for non-GCC and non-Clang compilers */
+#endif
+
+#ifndef MAKE_COMPILER_HAPPY_H
+#define MAKE_COMPILER_HAPPY_H
+
+#ifdef __GNUC__ // Check if the compiler is GCC or Clang
+#define make_compiler_happy(m) \
+	({ \
+		__CAST_AWAY_QUALIFIER_PUSH() \
+		m \
+		__CAST_AWAY_QUALIFIER_POP() \
+	})
+#elif defined(__clang__) // Check if the compiler is Clang
+#define make_compiler_happy(m) \
+	({ \
+		__CAST_AWAY_QUALIFIER_PUSH() \
+		m \
+		__CAST_AWAY_QUALIFIER_POP() \
+	})
+#else
+#define make_compiler_happy(m) m // Fallback for non-GCC and non-Clang compilers
+#endif
+
+#endif /* !MAKE_COMPILER_HAPPY_H */
+
+#define __CAST_AWAY_QUALIFIER(variable, qualifier, type) \
+	make_compiler_happy(((type)(__uintptr_t)(qualifier void *)(variable)))
+
+#endif /* !__CAST_AWAY_QUALIFIER */
 
 /*
  * __XNU_PRIVATE_EXTERN is a linkage decoration indicating that a symbol can be
