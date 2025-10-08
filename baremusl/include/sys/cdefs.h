@@ -1657,7 +1657,7 @@ __asm__(".symver impl, sym@@@verid")
 #define __CAST_AWAY_QUALIFIER(variable, qualifier, type) \
 	make_compiler_happy( \
 		({ \
-			((type)(__uintptr_t)(qualifier void *)(variable))); \
+			((type)(__uintptr_t)(qualifier void *)(variable)); \
 		}) \
 	)
 
