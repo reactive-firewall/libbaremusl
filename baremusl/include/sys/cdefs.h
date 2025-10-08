@@ -507,6 +507,26 @@
 //#define __pure
 //#endif
 
+#if __has_attribute(enum_extensibility)
+/// Use this to declare `__attribute__((__enum_extensibility__(open)))` when available.
+#define __enum_open __attribute__((__enum_extensibility__(open)))
+/// Use this to declare `__attribute__((__enum_extensibility__(closed)))` when available.
+#define __enum_closed __attribute__((__enum_extensibility__(closed)))
+#else
+/// Use this to declare `__attribute__((__enum_extensibility__(open)))` when available.
+#define __enum_open
+/// Use this to declare `__attribute__((__enum_extensibility__(closed)))` when available.
+#define __enum_closed
+#endif /* !__has_attribute(enum_extensibility) */
+
+#if __has_attribute(flag_enum)
+/// Use this to declare `__attribute__((__flag_enum__))` when available.
+#define __enum_options __attribute__((__flag_enum__))
+#else
+/// Use this to declare `__attribute__((__flag_enum__))` when available.
+#define __enum_options
+#endif /* !__has_attribute(enum_extensibility) */
+
 #endif /* !__has_attribute */
 
 #if defined(__clang__) && __clang__
@@ -1216,6 +1236,142 @@ __asm__(".symver impl, sym@@@verid")
 #define __unsafe_buffer_usage_end
 #endif
 
+/*-
+ * The following definitions are an extension of the behavior originally
+ * implemented in <sys/_posix.h>, but with a different level of granularity.
+ * POSIX.1 requires that the macros we test be defined before any standard
+ * header file is included.
+ *
+ * Here's a quick run-down of the versions:
+ *  defined(_POSIX_SOURCE)		1003.1-1988
+ *  _POSIX_C_SOURCE == 1		1003.1-1990
+ *  _POSIX_C_SOURCE == 2		1003.2-1992 C Language Binding Option
+ *  _POSIX_C_SOURCE == 199309		1003.1b-1993
+ *  _POSIX_C_SOURCE == 199506		1003.1c-1995, 1003.1i-1995,
+ *					and the omnibus ISO/IEC 9945-1: 1996
+ *  _POSIX_C_SOURCE == 200112		1003.1-2001
+ *  _POSIX_C_SOURCE == 200809		1003.1-2008
+ *
+ * In addition, the X/Open Portability Guide, which is now the Single UNIX
+ * Specification, defines a feature-test macro which indicates the version of
+ * that specification, and which subsumes _POSIX_C_SOURCE.
+ *
+ * Our macros begin with two underscores to avoid namespace screwage.
+ */
+
+/* Deal with IEEE Std. 1003.1-1990, in which _POSIX_C_SOURCE == 1. */
+#if defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE == 1
+#undef _POSIX_C_SOURCE		/* Probably illegal, but beyond caring now. */
+#define	_POSIX_C_SOURCE		199009
+#endif
+
+/* Deal with IEEE Std. 1003.2-1992, in which _POSIX_C_SOURCE == 2. */
+#if defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE == 2
+#undef _POSIX_C_SOURCE
+#define	_POSIX_C_SOURCE		199209
+#endif
+
+/* Deal with various X/Open Portability Guides and Single UNIX Spec. */
+#ifdef _XOPEN_SOURCE
+#if _XOPEN_SOURCE - 0 >= 700
+#define	__XSI_VISIBLE		700
+#undef _POSIX_C_SOURCE
+#define	_POSIX_C_SOURCE		200809
+#elif _XOPEN_SOURCE - 0 >= 600
+#define	__XSI_VISIBLE		600
+#undef _POSIX_C_SOURCE
+#define	_POSIX_C_SOURCE		200112
+#elif _XOPEN_SOURCE - 0 >= 500
+#define	__XSI_VISIBLE		500
+#undef _POSIX_C_SOURCE
+#define	_POSIX_C_SOURCE		199506
+#endif
+#endif
+
+/*
+ * Deal with all versions of POSIX.  The ordering relative to the tests above is
+ * important.
+ */
+#if defined(_POSIX_SOURCE) && !defined(_POSIX_C_SOURCE)
+#define	_POSIX_C_SOURCE		198808
+#endif
+#ifdef _POSIX_C_SOURCE
+#if _POSIX_C_SOURCE >= 200809
+#define	__POSIX_VISIBLE		200809
+#define	__ISO_C_VISIBLE		1999
+#elif _POSIX_C_SOURCE >= 200112
+#define	__POSIX_VISIBLE		200112
+#define	__ISO_C_VISIBLE		1999
+#elif _POSIX_C_SOURCE >= 199506
+#define	__POSIX_VISIBLE		199506
+#define	__ISO_C_VISIBLE		1990
+#elif _POSIX_C_SOURCE >= 199309
+#define	__POSIX_VISIBLE		199309
+#define	__ISO_C_VISIBLE		1990
+#elif _POSIX_C_SOURCE >= 199209
+#define	__POSIX_VISIBLE		199209
+#define	__ISO_C_VISIBLE		1990
+#elif _POSIX_C_SOURCE >= 199009
+#define	__POSIX_VISIBLE		199009
+#define	__ISO_C_VISIBLE		1990
+#else
+#define	__POSIX_VISIBLE		198808
+#define	__ISO_C_VISIBLE		0
+#endif /* _POSIX_C_SOURCE */
+#else
+/*-
+ * Deal with _ANSI_SOURCE:
+ * If it is defined, and no other compilation environment is explicitly
+ * requested, then define our internal feature-test macros to zero.  This
+ * makes no difference to the preprocessor (undefined symbols in preprocessing
+ * expressions are defined to have value zero), but makes it more convenient for
+ * a test program to print out the values.
+ *
+ * If a program mistakenly defines _ANSI_SOURCE and some other macro such as
+ * _POSIX_C_SOURCE, we will assume that it wants the broader compilation
+ * environment (and in fact we will never get here).
+ */
+#if defined(_ANSI_SOURCE)	/* Hide almost everything. */
+#define	__POSIX_VISIBLE		0
+#define	__XSI_VISIBLE		0
+#define	__BSD_VISIBLE		0
+#define	__ISO_C_VISIBLE		1990
+#define	__EXT1_VISIBLE		0
+#elif defined(_C99_SOURCE)	/* Localism to specify strict C99 env. */
+#define	__POSIX_VISIBLE		0
+#define	__XSI_VISIBLE		0
+#define	__BSD_VISIBLE		0
+#define	__ISO_C_VISIBLE		1999
+#define	__EXT1_VISIBLE		0
+#elif defined(_C11_SOURCE)	/* Localism to specify strict C11 env. */
+#define	__POSIX_VISIBLE		0
+#define	__XSI_VISIBLE		0
+#define	__BSD_VISIBLE		0
+#define	__ISO_C_VISIBLE		2011
+#define	__EXT1_VISIBLE		0
+#else				/* Default environment: show everything. */
+#define	__POSIX_VISIBLE		200809
+#define	__XSI_VISIBLE		700
+#define	__BSD_VISIBLE		1
+#define	__ISO_C_VISIBLE		2011
+#define	__EXT1_VISIBLE		1
+#endif
+#endif
+
+/* User override __EXT1_VISIBLE */
+#if defined(__STDC_WANT_LIB_EXT1__)
+#undef	__EXT1_VISIBLE
+#if __STDC_WANT_LIB_EXT1__
+#define	__EXT1_VISIBLE		1
+#else
+#define	__EXT1_VISIBLE		0
+#endif
+#endif /* __STDC_WANT_LIB_EXT1__ */
+
+#if defined(__mips) || defined(__riscv) || (defined(__powerpc64__) && (!defined(_CALL_ELF) || _CALL_ELF == 1))
+#define	__NO_TLS 1
+#endif
+
 #if defined(__clang__) && __clang__
 #pragma mark -
 #pragma mark Musl Stuff
@@ -1748,26 +1904,20 @@ __asm__(".symver impl, sym@@@verid")
 #elif !defined(__sys_cdefs_arch_unknown__) && defined(__arm__)
 #elif !defined(__sys_cdefs_arch_unknown__) && defined(__arm64__)
 #else
-#error Unsupported architecture
+
+#if defined(__APPLE__)
+#error "Unsupported architecture."
+#else /* !defined(__APPLE__) */
+#warning "Unsupported architecture. cdefs.h will break ABI for XNU (and possibly others)."
 #endif
 
+#endif /* !defined(__sys_cdefs_arch_unknown__) */
 
+#if !defined(__APPLE__)
+#warning "No __compiler_barrier() support. Defining anyway!"
+#endif /* !defined(__APPLE__) */
 
 #define __compiler_barrier() __asm__ __volatile__("" ::: "memory")
-
-#if __has_attribute(enum_extensibility)
-#define __enum_open __attribute__((__enum_extensibility__(open)))
-#define __enum_closed __attribute__((__enum_extensibility__(closed)))
-#else
-#define __enum_open
-#define __enum_closed
-#endif // __has_attribute(enum_extensibility)
-
-#if __has_attribute(flag_enum)
-#define __enum_options __attribute__((__flag_enum__))
-#else
-#define __enum_options
-#endif
 
 /*
  * Similar to OS_ENUM/OS_CLOSED_ENUM/OS_OPTIONS/OS_CLOSED_OPTIONS
@@ -1807,20 +1957,12 @@ __asm__(".symver impl, sym@@@verid")
 #if defined(KERNEL_PRIVATE) && \
         __has_attribute(xnu_data_size) && \
         __has_attribute(xnu_returns_data_pointer)
-/*
- * Annotate function parameters to specify that they semantically
- * represent the size of a data-only backing storage.
- */
-# define __xnu_data_size __attribute__((xnu_data_size))
-/*
- * Annotate function declarations to specify that the pointer they return
- * points to a data-only backing storage.
- */
-# define __xnu_returns_data_pointer __attribute__((xnu_returns_data_pointer))
+/* user probably wants Apple (c) stuff, we do not support replacing XNU headers if KERNEL_PRIVATE */
+#error "Unsupported usage - use official XNU cdefs.h headers. Or undefine KERNEL_PRIVATE."
 #else
 # define __xnu_data_size
 # define __xnu_returns_data_pointer
-#endif
+#endif /* !defined(KERNEL_PRIVATE) */
 
 
 #endif /* !_CDEFS_H_ */
